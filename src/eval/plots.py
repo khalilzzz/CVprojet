@@ -116,7 +116,7 @@ def video_sheet(df: pd.DataFrame, info: dict, out: Path, label: str = "") -> Pat
         _draw_epilines(ax, vf.frames[t + delta], F, x, xp, mask)
         ax.set_title(f"gap {delta} frames: {int(mask.sum())} of {len(mask)} fit F",
                      fontsize=10.5, color=INK2, loc="left")
-    v = df[df["valid"]]
+    v = df[df["valid"].astype(bool)]
     g = v.groupby("delta")
     pos = {d: i for i, d in enumerate(sorted(df["delta"].unique()))}
     panels = [("sampson_med_all", "Sampson distance, median (px)", None),

@@ -26,7 +26,7 @@ import hashlib
 import json
 import shutil
 import time
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, wait
 from datetime import datetime
 from pathlib import Path
 
@@ -62,7 +62,8 @@ def v1_job(video_id: str, path: str, label: str, cfg: dict, out_dir: str) -> str
     return video_id
 
 
-def run_v1(videos: pd.DataFrame, processed: dict, cfg: dict, force: bool, workers: int) -> dict:
+def run_v1(videos: pd.DataFrame, processed: dict, cfg: dict, force: bool, workers: int,
+           report_only: bool = False) -> dict:
     """Returns {video id: cache folder}. Computes only what is missing."""
     sub = dict(frames=cfg["frames"], v1=cfg["v1"], seed=cfg["seed"])
     dirs, jobs = {}, []
@@ -72,19 +73,63 @@ def run_v1(videos: pd.DataFrame, processed: dict, cfg: dict, force: bool, worker
         dirs[r["id"]] = d
         if force or not (d / "pairs.csv").exists():
             jobs.append((r["id"], str(path), r["label"], sub, str(d)))
-    print(f"[v1] {len(videos) - len(jobs)} videos from cache, {len(jobs)} to compute")
-    if jobs:
+    print(f"[v1] {len(videos) - len(jobs)} videos from cache, {len(jobs)} to compute"
+          + (" (skipped: --report-only)" if report_only and jobs else ""))
+    if jobs and not report_only:
         t0 = time.time()
-        with ProcessPoolExecutor(max_workers=max(1, min(workers, len(jobs)))) as pool:
-            futures = {pool.submit(v1_job, *j): j[0] for j in jobs}
-            for k, f in enumerate(as_completed(futures), 1):
-                f.result()
-                print(f"[v1] {k}/{len(jobs)} done: {futures[f]} ({time.time() - t0:.0f} s)")
+        n_workers = max(1, min(workers, len(jobs)))
+        # Memory safety: at most n_workers jobs in flight, a new job starts only when enough
+        # RAM is free, and each worker process is replaced after a few videos (no slow growth).
+        pool = ProcessPoolExecutor(max_workers=n_workers, max_tasks_per_child=MAX_TASKS_PER_CHILD)
+        try:
+            pending, todo, done = {}, list(jobs), 0
+            while todo or pending:
+                while todo and len(pending) < n_workers and _ram_ok(len(pending)):
+                    j = todo.pop(0)
+                    pending[pool.submit(v1_job, *j)] = j[0]
+                if not pending:                     # nothing running and RAM still low: wait
+                    time.sleep(5)
+                    continue
+                finished, _ = wait(pending, timeout=30, return_when=FIRST_COMPLETED)
+                for f in finished:
+                    vid = pending.pop(f)
+                    done += 1
+                    try:
+                        f.result()
+                        status = "done"
+                    except Exception as exc:            # one bad video must not stop the run
+                        status = f"FAILED ({type(exc).__name__}: {exc})"
+                    print(f"[v1] {done}/{len(jobs)} {status}: {vid} "
+                          f"({time.time() - t0:.0f} s, {_free_gb():.1f} GB RAM free)", flush=True)
+        finally:
+            pool.shutdown(wait=True, cancel_futures=True)
     return dirs
+
+
+MAX_TASKS_PER_CHILD = 25        # videos processed by one worker process before it is replaced
+MIN_FREE_GB = 2.0               # do not start a new video below this amount of free RAM
+
+
+def _free_gb() -> float:
+    try:
+        import psutil
+        return psutil.virtual_memory().available / 1e9
+    except ImportError:                             # psutil missing: no memory check
+        return float("inf")
+
+
+def _ram_ok(running: int) -> bool:
+    """True if a new job may start. The first job always starts, so the run cannot stall."""
+    return running == 0 or _free_gb() >= MIN_FREE_GB
 
 
 def build_report(run_dir: Path, meta: pd.DataFrame, videos: pd.DataFrame, dirs: dict,
                  cfg: dict) -> Path:
+    ok = [i for i in videos["id"] if (dirs[i] / "pairs.csv").exists()]
+    if len(ok) < len(videos):
+        print(f"[warning] {len(videos) - len(ok)} videos have no result (failed or not computed) "
+              f"and are left out of the report")
+    videos = videos[videos["id"].isin(ok)]
     pairs = pd.concat([pd.read_csv(dirs[i] / "pairs.csv") for i in videos["id"]], ignore_index=True)
     pairs.to_csv(run_dir / "v1_pairs.csv", index=False)
     feats = pd.DataFrame([json.loads((dirs[i] / "features.json").read_text()) for i in videos["id"]])
@@ -239,6 +284,8 @@ def main() -> None:
     ap.add_argument("--generators", nargs="*", help="keep the real clips and these generators")
     ap.add_argument("--max-scenes", type=int, help="keep the first N scenes (sorted by id)")
     ap.add_argument("--force", action="store_true", help="recompute even if cached")
+    ap.add_argument("--report-only", action="store_true",
+                    help="compute nothing: build the report from the videos already in the cache")
     ap.add_argument("--workers", type=int)
     args = ap.parse_args()
     cfg = load_config(args.config)
@@ -271,7 +318,8 @@ def main() -> None:
             print(f"[normalize] {k}/{len(videos)}")
     print(f"[normalize] {len(processed)} videos in data/processed/videos/")
 
-    dirs = run_v1(videos, processed, cfg, args.force, args.workers or cfg["run"]["workers"])
+    dirs = run_v1(videos, processed, cfg, args.force, args.workers or cfg["run"]["workers"],
+                  report_only=args.report_only)
 
     run_dir = RESULTS / "runs" / datetime.now().strftime("%Y%m%d-%H%M%S")
     run_dir.mkdir(parents=True)

@@ -38,6 +38,12 @@ from src.utils.config import load_config
 
 CODE_VERSION = "v1-2026-11-12a"     # change it to invalidate the cache of this feature
 TRIPLET_METRICS = ["reproj3_med_px", "reproj3_inlier_ratio", "reproj12_med_px", "n_tracks"]
+PAIR_COLUMNS = ["video", "delta", "t", "t0_s", "t1_s", "n_matches", "valid", "n_inliers_F",
+                "inlier_ratio_F", "inlier_ratio_H", "h_cover", "parallax_px", "parallax_q90_px",
+                "sampson_med_all", "sampson_q90_all", "sampson_med_in", "sampson_rmse_in",
+                "median_flow_px"]
+TRIPLET_COLUMNS = ["video", "delta", "t", "t0_s", "t1_s", "valid", "n_tracks", "reproj3_med_px",
+                   "reproj3_q90_px", "reproj3_inlier_ratio", "reproj12_med_px", "median_flow_px"]
 PAIR_METRICS = ["n_matches", "inlier_ratio_F", "sampson_med_all", "sampson_q90_all",
                 "sampson_med_in", "h_cover", "parallax_px", "parallax_q90_px", "median_flow_px"]
 
@@ -227,7 +233,10 @@ def analyse_frames(vf, video_id: str, cfg: dict, seed: int = 0):
                 out = triplet_stats(feats, t, gap, vf.shape, rng, v1)
                 trip.append(dict(video=video_id, delta=gap, t=t, t0_s=vf.times[t],
                                  t1_s=vf.times[t + 2 * gap], valid=out is not None) | (out or {}))
-    return pd.DataFrame(rows), pd.DataFrame(trip), dict(frames=vf, examples=examples)
+    # a video may have no valid pair or triplet: keep every column so later steps still work
+    pairs = pd.DataFrame(rows).reindex(columns=PAIR_COLUMNS)
+    triplets = pd.DataFrame(trip).reindex(columns=TRIPLET_COLUMNS)
+    return pairs, triplets, dict(frames=vf, examples=examples)
 
 
 def analyse_video(path: Path, video_id: str, cfg: dict, seed: int = 0):

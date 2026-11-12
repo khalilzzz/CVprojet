@@ -9,6 +9,8 @@ pandas
 scikit-image
 scikit-learn
 imageio-ffmpeg   # ffmpeg binary for src/data/normalize.py
+psutil           # free-RAM check in src/run.py
+huggingface_hub  # download of public benchmarks (src/data/vifbench.py)
 
 # Later phases (install when needed)
 # torch
