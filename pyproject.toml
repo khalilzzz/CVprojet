@@ -1,0 +1,10 @@
+[project]
+name = "ai-media-detection"
+version = "0.1.0"
+description = "Detecting AI-generated images and videos with physical and geometric cues (CSC_51073_EP project)"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-ra"

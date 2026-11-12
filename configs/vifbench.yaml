@@ -1,0 +1,42 @@
+# Pipeline settings for the public benchmark ViF-Bench (clips of 5 s, 256 px high, 16 fps).
+# python -m src.run --config configs/vifbench.yaml --dataset vifbench --max-scenes 30
+seed: 0
+
+normalize:
+  fps: 16                # native rate of the benchmark; a few 24 fps generators are brought down
+  short_side: 256        # native height; larger generators are brought down
+  crf: 18
+  preset: medium
+
+frames:
+  skip_s: 0.5            # image-to-video clips start on the real frame
+  duration_s: 4.5
+  crop_bottom: 0.10      # same crop for every video (visible watermarks)
+  crop_top: 0.0
+
+v1:
+  deltas: [1, 2, 4, 8, 16, 32]            # frame gaps at 16 fps (32 = 2 s)
+  stride: 3
+  min_matches: 16
+  matching:
+    n_features: 2000
+    grid: [6, 6]
+    ratio: 0.75
+    mutual: true
+  fundamental:
+    normalization: course
+    threshold_px: 1.0    # frames are about 3 times smaller than our 720p clips
+    p: 0.99
+    max_iters: 3000
+  homography:
+    threshold_px: 2.0
+    p: 0.99
+    max_iters: 1500
+  three_view:
+    gaps: [3, 8, 16]
+    stride: 4
+    threshold_px: 1.5
+    max_iters: 800
+
+run:
+  workers: 8

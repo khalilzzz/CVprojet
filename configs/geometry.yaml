@@ -1,0 +1,19 @@
+# Parameters of the geometry core (src/geometry). Pixel units unless stated.
+seed: 0
+
+ransac:
+  p: 0.99            # probability of drawing at least one outlier-free sample
+  max_iters: 5000
+
+fundamental:
+  normalization: course   # course: T maps the image to [-1, 1]^2 (EP4 slide 103) | hartley
+  threshold_px: 1.5       # Sampson distance threshold for inliers (about 3 sigma for 0.5 px noise)
+
+homography:
+  normalization: hartley
+  threshold_px: 3.0       # symmetric transfer error threshold
+
+vanishing:
+  n_vps: 3
+  angle_threshold_deg: 2.0
+  min_inliers: 5

@@ -1,0 +1,22 @@
+# Core (needed now)
+numpy
+scipy
+opencv-contrib-python
+pyyaml
+pytest
+matplotlib
+pandas
+scikit-image
+scikit-learn
+imageio-ffmpeg   # ffmpeg binary for src/data/normalize.py
+
+# Later phases (install when needed)
+# torch
+# torchvision
+# open_clip_torch
+# kornia
+# pycolmap
+# lightglue @ git+https://github.com/cvg/LightGlue.git
+# PyMaxflow
+# diffusers
+# gsplat  (bonus V4, NVIDIA GPU required)

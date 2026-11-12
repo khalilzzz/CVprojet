@@ -1,0 +1,41 @@
+# Whole pipeline (python -m src.run). Same parameters for real and generated media.
+seed: 0
+
+normalize:               # CLAUDE.md section 6, written to data/processed/videos/
+  fps: 24
+  short_side: 720        # downscale only, never upscale
+  crf: 18                # H.264 quality, identical for every video
+  preset: medium
+
+frames:                  # how the normalized clips are read
+  skip_s: 0.5            # drop the first 0.5 s (real first frame in image-to-video)
+  duration_s: 6.0        # keep at most 6 s after the skip
+  crop_bottom: 0.10      # same crop for every video (visible watermarks)
+  crop_top: 0.0
+
+v1:                      # epipolar geometry between frames
+  deltas: [1, 2, 5, 10, 20, 48, 72, 96]   # frame gaps at 24 fps (96 = 4 s)
+  stride: 4              # a new pair starts every `stride` frames
+  min_matches: 16
+  matching:
+    n_features: 4000
+    grid: [8, 8]         # keypoints are spread over a grid (quota per cell)
+    ratio: 0.75          # Lowe ratio test (course EP3 slide 51)
+    mutual: true         # keep a match only if it is the nearest neighbour both ways
+  fundamental:
+    normalization: course
+    threshold_px: 1.5    # Sampson distance (a 1D distance)
+    p: 0.99
+    max_iters: 5000
+  homography:
+    threshold_px: 3.0    # symmetric transfer error (a 2D distance, hence 2 x 1.5)
+    p: 0.99
+    max_iters: 2000
+  three_view:            # triangulate from frames (t, t+k), check in frame t+2k (Session 7)
+    gaps: [5, 12, 24]    # k, in frames
+    stride: 6
+    threshold_px: 2.0    # reprojection error
+    max_iters: 1000
+
+run:
+  workers: 6             # videos processed in parallel

@@ -1,0 +1,35 @@
+# Data and outputs (never versioned)
+data/raw/*
+data/processed/*
+results/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!results/figures/
+results/figures/*
+!results/figures/.gitkeep
+
+# Media
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.webm
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.ipynb_checkpoints/
+.venv/
+venv/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Course material (slides, lab code): kept locally, not published
+course/
+CLAUDE.md
+gpuecole.md
