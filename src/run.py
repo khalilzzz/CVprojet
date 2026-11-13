@@ -213,7 +213,10 @@ def build_report_v1(run_dir: Path, meta: pd.DataFrame, videos: pd.DataFrame, dir
     generated, copied = compare.split_windows(paired)
     binned = compare.bin_by_motion(generated)
     matched = compare.matched_summary(binned)
-    many = len(scenes) > 12            # benchmark-sized run: aggregate per generator
+    # One panel per scene and one line per video is readable only for a few scenes with a few
+    # videos each (our own clips). Otherwise aggregate: one row per generator.
+    per_scene = valid[valid["scene_id"].isin(scenes)].groupby("scene_id")["video"].nunique()
+    many = len(scenes) > 6 or (len(per_scene) and per_scene.max() > 4)
     if many:
         # a motion range shared by ALL the generated versions of a scene is rare:
         # compare each generator with the real clip on its own
@@ -373,6 +376,7 @@ def classification_section(rep: Report, feats: pd.DataFrame, run_dir: Path, cfg:
 
 def build_report(run_dir: Path, meta: pd.DataFrame, videos: pd.DataFrame, fam_dirs: dict,
                  cfg: dict, classify: bool = True) -> Path:
+    print("[report] collecting features and writing the report (a few minutes on a big run)", flush=True)
     feats = collect_features(meta, videos, fam_dirs)
     feats.to_csv(run_dir / "features.csv", index=False)
     if "v1" in fam_dirs:

@@ -41,6 +41,16 @@ def apply_style() -> None:
     })
 
 
+def short_name(name: str) -> str:
+    """Readable name: public-benchmark ids "vif__<generator>__<clip>" become the generator
+    (or "real"), scene ids "vif__<clip>" lose their prefix; our own ids are kept."""
+    name = str(name)
+    if name.startswith("vif__"):
+        parts = name.split("__")
+        return parts[1] if len(parts) >= 3 else name[5:]
+    return name
+
+
 def _series_style(videos: pd.DataFrame) -> dict:
     """video id -> dict(color, marker, ls, label). `videos` has columns video, label."""
     out, seen = {}, {}
@@ -50,7 +60,8 @@ def _series_style(videos: pd.DataFrame) -> dict:
         seen[r["label"]] = k + 1
         out[r["video"]] = dict(color=COLORS.get(r["label"], INK2), marker=MARKERS[k % len(MARKERS)],
                                ls=STYLES[k % len(STYLES)],
-                               label=f"{r['video']} ({LABEL_NAME.get(r['label'], r['label'])})")
+                               label=(short_name(r["video"]) if short_name(r["video"]) == "real"
+                                      else f"{short_name(r['video'])} ({LABEL_NAME.get(r['label'], r['label'])})"))
     return out
 
 
@@ -182,7 +193,7 @@ def scene_delta_grid(pairs: pd.DataFrame, out: Path) -> Path:
             if i == len(scenes) - 1:
                 ax.set_xlabel("frame gap (24 frames = 1 s)")
             if j == 0:
-                ax.set_ylabel(scene, fontsize=10.5, color=INK)
+                ax.set_ylabel(short_name(scene), fontsize=10.5, color=INK)
                 ax.legend(loc="upper left", fontsize=8.5)
     fig.suptitle("Same frame gap, not the same motion: a clip that moves less looks more consistent "
                  "(check the parallax column).\nLine = median over frame pairs, band = middle half.",
@@ -222,7 +233,7 @@ def equal_motion(pairs: pd.DataFrame, binned: pd.DataFrame, out: Path,
         _plain_log(ax, "x")
         _plain_log(ax, "y")
         ax.grid(True, axis="both", color=GRID)
-        ax.set_title(scene, loc="left", fontsize=11.5)
+        ax.set_title(short_name(scene), loc="left", fontsize=11.5)
         ax.set_xlabel("image motion of the frame pair (px)")
         if k % ncol == 0:
             ax.set_ylabel(ylabel)
@@ -260,7 +271,7 @@ def scene_summary(matched: pd.DataFrame, out: Path, col: str = "sampson_matched"
                 dy, n_fake = -15 - 11 * n_fake, n_fake + 1
             ax.annotate(fmt.format(r[col]), (r[col], i), textcoords="offset points",
                         xytext=(0, dy), ha="center", fontsize=8.5, color=INK2)
-    ax.set_yticks(range(len(scenes)), scenes)
+    ax.set_yticks(range(len(scenes)), [short_name(x) for x in scenes])
     ax.set_ylim(len(scenes) - 0.3, -0.6)
     lo, hi = matched[col].min(), matched[col].max()
     ax.set_xlim(lo / 1.15, hi * 1.15)
@@ -299,7 +310,7 @@ def three_view_grid(trip: pd.DataFrame, out: Path) -> Path:
                     label=st["label"])
         _plain_log(ax, "y")
         ax.set_xticks(list(pos.values()), [str(d) for d in pos])
-        ax.set_title(scene, loc="left", fontsize=11.5)
+        ax.set_title(short_name(scene), loc="left", fontsize=11.5)
         ax.set_xlabel("frame gap k of the triplet (t, t+k, t+2k)")
         if k % ncol == 0:
             ax.set_ylabel("reprojection error in frame 3 (px)")

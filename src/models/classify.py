@@ -19,6 +19,7 @@ Standalone use:  python -m src.models.classify results/latest_vifbench/features.
 from __future__ import annotations
 
 import argparse
+import time
 import warnings
 from pathlib import Path
 
@@ -124,6 +125,8 @@ def run(df: pd.DataFrame, seed: int = 0, n_splits: int = 5, unseen: bool = True)
         if not cols:
             continue
         X = df[cols].to_numpy(float)
+        t0 = time.time()
+        print(f"[classify] {name}: {len(cols)} features, {len(y)} videos", flush=True)
         s = oof_scores(X, y, folds, name, seed)
         scores[name] = s
         auc = _auc(y, s)
@@ -144,6 +147,7 @@ def run(df: pd.DataFrame, seed: int = 0, n_splits: int = 5, unseen: bool = True)
                 su = oof_scores(X, y, folds, name, seed, train_mask=keep_train, test_mask=test)
                 col[g] = _auc(y[test], su[test])
             unseen_rows[name] = col
+        print(f"[classify] {name}: AUC {auc:.3f} ({time.time() - t0:.0f} s)", flush=True)
     out = dict(summary=pd.DataFrame(summary), per_generator=pd.DataFrame(per_gen).rename_axis("generator").reset_index(),
                rocs=rocs, scores=scores, importance=importance(df, seed))
     if unseen_rows:
