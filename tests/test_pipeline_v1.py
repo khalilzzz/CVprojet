@@ -14,16 +14,26 @@ V1_CFG = dict(min_matches=16,
 
 
 def _write_video(path, n, fps, size=(96, 64)):
-    """Frame k is uniformly gray with value 2 * k, so a frame identifies its index."""
+    """Frame k shows its index in two flat halves: left = k // 16, right = k % 16, coded as
+    grey levels 16 * digit + 8. The step of 16 survives the JPEG quantization of every
+    OpenCV build (a step of 2 did not on Linux)."""
     w = cv2.VideoWriter(str(path), cv2.VideoWriter_fourcc(*"MJPG"), fps, size)
     assert w.isOpened()
+    half = size[0] // 2
     for k in range(n):
-        w.write(np.full((size[1], size[0], 3), 2 * k, np.uint8))
+        f = np.empty((size[1], size[0], 3), np.uint8)
+        f[:, :half] = 16 * (k // 16) + 8
+        f[:, half:] = 16 * (k % 16) + 8
+        w.write(f)
     w.release()
 
 
 def _index(frame):
-    return int(round(float(frame.mean()) / 2))
+    """Inverse of _write_video, read away from the edges and the middle line (JPEG ringing)."""
+    h, w = frame.shape[:2]
+    left = float(frame[8:h - 8, 8:w // 2 - 8].mean())
+    right = float(frame[8:h - 8, w // 2 + 8:w - 8].mean())
+    return 16 * int(round((left - 8) / 16)) + int(round((right - 8) / 16))
 
 
 def test_read_frames_skip_and_duration(tmp_path):
