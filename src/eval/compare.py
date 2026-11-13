@@ -118,6 +118,11 @@ def video_table(pairs: pd.DataFrame, meta: pd.DataFrame, deltas=(2, 20, 96)) -> 
     return pd.DataFrame(rows).sort_values(["scene", "label", "video"], ascending=[True, False, True])
 
 
+def _ratio(a: float, b: float) -> float:
+    """a / b, or NaN when b is zero or missing (a video with no motion or no valid triplet)."""
+    return float(a / b) if np.isfinite(a) and np.isfinite(b) and b > 0 else float("nan")
+
+
 def three_view_table(trip: pd.DataFrame, min_triplets: int = 3) -> pd.DataFrame:
     """One row per video: median three-view reprojection error per gap, and its growth.
 
@@ -141,8 +146,8 @@ def three_view_table(trip: pd.DataFrame, min_triplets: int = 3) -> pd.DataFrame:
             flow = g.groupby("delta")["median_flow_px"].median()
             row = dict(scene_id=scene, video=video, label=g["label"].iloc[0])
             row.update({f"error px, gap {d}": float(med[d]) for d in common})
-            row.update(gaps=f"{lo} to {hi}", growth=float(med[hi] / med[lo]),
-                       motion_growth=float(flow[hi] / flow[lo]))
+            row.update(gaps=f"{lo} to {hi}", growth=_ratio(med[hi], med[lo]),
+                       motion_growth=_ratio(flow[hi], flow[lo]))
             rows.append(row)
     out = pd.DataFrame(rows)
     if out.empty:

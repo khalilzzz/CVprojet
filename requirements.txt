@@ -11,11 +11,11 @@ scikit-learn
 imageio-ffmpeg   # ffmpeg binary for src/data/normalize.py
 psutil           # free-RAM check in src/run.py
 huggingface_hub  # download of public benchmarks (src/data/vifbench.py)
+torch            # CLIP baseline (src/models/baseline_clip.py); GPU if available
+torchvision
+open_clip_torch
 
 # Later phases (install when needed)
-# torch
-# torchvision
-# open_clip_torch
 # kornia
 # pycolmap
 # lightglue @ git+https://github.com/cvg/LightGlue.git

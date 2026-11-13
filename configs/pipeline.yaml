@@ -37,5 +37,24 @@ v1:                      # epipolar geometry between frames
     threshold_px: 2.0    # reprojection error
     max_iters: 1000
 
+i1:                      # frequency fingerprint of the noise residual (Sessions 1-2)
+  n_frames: 16           # frames spread over the clip; their log spectra are averaged
+  crop: 512              # central square used for the FFT (px)
+  n_bins: 24             # radial profile bins between 0 and 0.5 cycles/pixel
+  median_ksize: 3        # residual = frame - median filter
+
+v3:                      # temporal coherence by optical flow (Session 6)
+  stride: 3              # a pair (t, t+1) every `stride` frames
+  max_pairs: 30
+
+clip:                    # deep learning baseline (Session 5), with --features ...,clip
+  model: ViT-B-32-quickgelu   # the architecture the OpenAI weights were trained with
+  pretrained: openai
+  n_frames: 8
+
+classify:                # src/models/classify.py
+  n_splits: 5            # folds grouped by scene
+  unseen_generator: true # also test each generator when it is left out of training
+
 run:
   workers: 6             # videos processed in parallel

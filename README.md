@@ -28,14 +28,20 @@ cached per video in `results/cache/`), and compared. Each run writes its figures
 and a self-contained `report.html` to `results/runs/<date-time>/`, copied to
 `results/latest/`. Parameters live in `configs/pipeline.yaml`.
 
-Public benchmark ViF-Bench (165 real clips, 19 generators, paired by file name). Download
-`source_videos.zip` (0.6 GB) from `huggingface.co/datasets/JoeLeelyf/ViF-Bench` and unzip
-it in `data/raw/public/vifbench/`, then:
+Feature families (`--features`, default `v1,i1,v3`): V1 epipolar and three-view geometry,
+I1 frequency fingerprint, V3 temporal coherence, and `clip` for the deep learning baseline
+(GPU if available). When at least 10 scenes have a real and a generated clip, the report
+adds a classification section: cross-validation grouped by scene, AUC per family, per
+generator, and for generators left out of training.
+
+Public benchmark ViF-Bench (165 real clips, 19 generators, paired by file name):
 
 ```bash
-python -m src.data.vifbench        # adds the clips to data/metadata.csv
-python -m src.run --config configs/vifbench.yaml --dataset vifbench --max-scenes 60 \
-    --generators Wan2.2-I2V-14B HunyuanVideo-I2V sora-2      # report in results/latest_vifbench/
+python -m src.data.vifbench --download     # 0.6 GB from Hugging Face, unzip, add to data/metadata.csv
+python -m src.run --config configs/vifbench.yaml --dataset vifbench --features v1,i1,v3,clip --workers 16
+# report in results/latest_vifbench/report.html, classifier outputs in results/latest_vifbench/classification/
+python -m src.run --config configs/vifbench.yaml --dataset vifbench --max-scenes 20   # quick test
+python -m src.run --config configs/vifbench.yaml --dataset vifbench --report-only     # report from the cache only
 ```
 
 Run the tests:

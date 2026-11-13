@@ -343,3 +343,69 @@ def ratio_by_generator(df: pd.DataFrame, meta: pd.DataFrame, col: str, out: Path
                  loc="left", fontsize=11.5)
     fig.tight_layout()
     return _save(fig, out)
+
+
+# ---------------------------------------------------------------- classification
+FAMILY_COLORS = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300"]
+
+
+def classification_figures(res: dict, out: Path) -> list[tuple[Path, str]]:
+    """ROC curves per feature family, AUC per generator (seen and unseen), feature importance."""
+    apply_style()
+    out = Path(out)
+    figs = []
+    # ROC curves
+    fig, ax = plt.subplots(figsize=(6.6, 6.0))
+    ax.plot([0, 1], [0, 1], ls="--", color="#b9b8b2", lw=1.2)
+    for k, (name, (fpr, tpr, auc)) in enumerate(res["rocs"].items()):
+        ax.plot(fpr, tpr, color=FAMILY_COLORS[k % len(FAMILY_COLORS)], lw=2.0,
+                label=f"{name}: AUC {auc:.2f}")
+    ax.set(xlim=(0, 1), ylim=(0, 1.01), xlabel="false positive rate (real clips called generated)",
+           ylabel="true positive rate (generated clips detected)")
+    ax.grid(True, axis="both", color=GRID)
+    ax.set_title("Real or generated? Cross-validated ROC curves, scenes kept apart", loc="left", fontsize=11.5)
+    ax.legend(loc="lower right", fontsize=9)
+    fig.tight_layout()
+    figs.append((_save(fig, out / "classify_roc.png"), "ROC curves per feature family"))
+    # AUC per generator
+    for key, title in [("per_generator", "AUC per generator (every generator seen in training)"),
+                       ("unseen_generator", "AUC per generator, generator NEVER seen in training")]:
+        tab = res.get(key)
+        if tab is None or tab.empty:
+            continue
+        t = tab.set_index("generator")
+        t = t.loc[t.mean(axis=1).sort_values(ascending=False).index]
+        fig, ax = plt.subplots(figsize=(1.6 + 1.45 * t.shape[1], 1.4 + 0.36 * t.shape[0]))
+        im = ax.imshow(t.to_numpy(float), cmap="Blues", vmin=0.5, vmax=1.0, aspect="auto")
+        for i in range(t.shape[0]):
+            for j in range(t.shape[1]):
+                v = t.iat[i, j]
+                ax.text(j, i, "-" if not np.isfinite(v) else f"{v:.2f}", ha="center", va="center",
+                        fontsize=8.5, color="white" if np.isfinite(v) and v > 0.8 else INK)
+        ax.set_xticks(range(t.shape[1]), [c.replace(" (", "\n(") for c in t.columns], fontsize=8.5)
+        ax.set_yticks(range(t.shape[0]), t.index, fontsize=8.5)
+        ax.grid(False)
+        ax.tick_params(length=0)
+        for s in ax.spines.values():
+            s.set_visible(False)
+        cb = fig.colorbar(im, ax=ax, fraction=0.03, pad=0.02)
+        cb.set_label("AUC (0.5 = chance, 1 = perfect)")
+        ax.set_title(title, loc="left", fontsize=11.5)
+        fig.tight_layout()
+        figs.append((_save(fig, out / f"classify_{key}.png"), title))
+    # importance
+    imp = res.get("importance")
+    if imp is not None and not imp.empty:
+        imp = imp.iloc[::-1]
+        fig, ax = plt.subplots(figsize=(8.5, 1.2 + 0.32 * len(imp)))
+        colors = [COLORS["fake"] if c > 0 else COLORS["real"] for c in imp["coefficient"]]
+        ax.barh(range(len(imp)), imp["coefficient"], color=colors, height=0.7)
+        ax.set_yticks(range(len(imp)), imp["feature"], fontsize=8.5)
+        ax.axvline(0, color=INK2, lw=1)
+        ax.grid(True, axis="x", color=GRID)
+        ax.grid(False, axis="y")
+        ax.set_xlabel("standardized coefficient (orange: pushes to 'generated', blue: to 'real')")
+        ax.set_title("Physics features that weigh most (logistic regression)", loc="left", fontsize=11.5)
+        fig.tight_layout()
+        figs.append((_save(fig, out / "classify_importance.png"), "Feature importance"))
+    return figs

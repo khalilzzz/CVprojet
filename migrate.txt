@@ -1,0 +1,35 @@
+# Nouvelle machine Linux (école) : tout installer et lancer le benchmark ViF-Bench complet.
+# Résultat : /Data/khl/CVprojet/results/latest_vifbench/report.html
+# Durée : environ 30 à 60 min (dépend du nombre de cœurs). Lance-le dans tmux :
+#   tmux new -s cv        (Ctrl+B puis D pour te détacher, tmux attach -t cv pour revenir)
+# Avant : pousser la dernière version du code depuis ton PC (git push).
+# Copier-coller tout le bloc ci-dessous d'un coup.
+
+cd /Data && mkdir -p /Data/khl && cd /Data/khl && \
+{ git clone https://github.com/khalilzzz/CVprojet || echo "repo deja la"; } && \
+cd CVprojet && git pull && \
+export PIP_CACHE_DIR=/Data/khl/.cache/pip && \
+export XDG_CACHE_HOME=/Data/khl/.cache && \
+export TORCH_HOME=/Data/khl/.cache/torch && \
+export HF_HOME=/Data/khl/.cache/huggingface && \
+mkdir -p "$PIP_CACHE_DIR" "$TORCH_HOME" "$HF_HOME" && \
+{ [ -d /Data/khl/.venv-cv ] || python3 -m venv /Data/khl/.venv-cv; } && \
+source /Data/khl/.venv-cv/bin/activate && \
+python -m pip install --upgrade pip && \
+pip install -r requirements.txt && \
+{ python -c "import cv2" 2>/dev/null || { pip uninstall -y opencv-contrib-python && pip install opencv-contrib-python-headless; }; } && \
+python -c "import torch, cv2; print('cuda:', torch.cuda.is_available(), '| opencv', cv2.__version__)" && \
+python -m pytest -q -x && \
+python -m src.data.vifbench --download && \
+W=$(( $(nproc) > 32 ? 32 : $(nproc) )) && echo "workers: $W" && \
+python -m src.run --config configs/vifbench.yaml --dataset vifbench --features v1,i1,v3,clip --workers "$W" && \
+echo "DONE -> $(pwd)/results/latest_vifbench/report.html" && \
+echo "classification -> $(pwd)/results/latest_vifbench/classification/classify_summary.csv" && \
+column -s, -t < results/latest_vifbench/classification/classify_summary.csv
+
+# Si le run s'arrête (connexion, mémoire) : relancer la même commande python -m src.run ...
+# (le cache reprend où il s'était arrêté). Rapport seul, sans calcul :
+#   python -m src.run --config configs/vifbench.yaml --dataset vifbench --features v1,i1,v3,clip --report-only
+#
+# Rapatrier les résultats sur ton PC (à lancer depuis le PC, à la racine du projet) :
+#   scp -rp <login>@<machine>:/Data/khl/CVprojet/results/latest_vifbench ./results/latest_vifbench_school
