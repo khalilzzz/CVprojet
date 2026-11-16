@@ -1,7 +1,6 @@
 # Detecting AI-generated images and videos with physical and geometric cues
 
 Course project for CSC_51073_EP (Image Analysis and Computer Vision, École polytechnique).
-See `CLAUDE.md` for the full project description, methods and work plan.
 
 ## Install
 
