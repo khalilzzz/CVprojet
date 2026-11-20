@@ -11,7 +11,7 @@ For frame pairs (t, t+1):
    on the image, on its high-pass part (fine texture), and on pixels that barely move.
 
 Features (medians over pairs): ``v3_res_med``, ``v3_res_q90``, ``v3_hf_res_med``,
-``v3_hf_res_norm`` (high-pass residual / noise level of the frame), ``v3_static_res_med``
+``v3_hf_res_norm`` (high-pass residual / noise level of the frame), ``v3_static_res_mean``
 (pixels moving less than 0.5 px), ``v3_fb_bad_frac`` (share of pixels failing the check),
 ``v3_flow_med`` (median motion, px, as a covariate).
 """
@@ -24,7 +24,7 @@ import numpy as np
 
 from src.data.frames import read_frames
 
-CODE_VERSION = "v3-2026-11-13a"
+CODE_VERSION = "v3-2026-11-13b"
 FB = dict(pyr_scale=0.5, levels=3, winsize=15, iterations=3, poly_n=5, poly_sigma=1.2, flags=0)
 
 
@@ -57,13 +57,28 @@ def pair_stats(a: np.ndarray, b: np.ndarray) -> dict:
     static = ok & (mag < 0.5)
     return dict(v3_res_med=float(np.median(res)), v3_res_q90=float(np.quantile(res, 0.9)),
                 v3_hf_res_med=float(np.median(hres)), v3_hf_res_norm=float(np.median(hres) / noise),
-                v3_static_res_med=(float(np.median(np.abs(a.astype(np.float32) - warped)[static]))
+                v3_static_res_mean=(float(np.mean(np.abs(a.astype(np.float32) - warped)[static]))
                                    if static.sum() >= 100 else np.nan),
                 v3_fb_bad_frac=float(1.0 - ok[inside].mean()) if inside.any() else np.nan,
                 v3_flow_med=float(np.median(mag)))
 
 
-FEATURES = ["v3_res_med", "v3_res_q90", "v3_hf_res_med", "v3_hf_res_norm", "v3_static_res_med",
+def residual_map(a: np.ndarray, b: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """For figures: |high-pass(a) - high-pass(b warped onto a)|, the kept-pixel mask of the
+    forward-backward check, and the flow magnitude (same steps as pair_stats)."""
+    h, w = a.shape
+    fwd, bwd = _flow(a, b), _flow(b, a)
+    gx, gy = np.meshgrid(np.arange(w, dtype=np.float32), np.arange(h, dtype=np.float32))
+    mx, my = gx + fwd[..., 0], gy + fwd[..., 1]
+    inside = (mx >= 0) & (mx <= w - 1) & (my >= 0) & (my <= h - 1)
+    b_at = cv2.remap(bwd, mx, my, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+    mag = np.hypot(fwd[..., 0], fwd[..., 1])
+    ok = inside & (np.hypot(*(fwd + b_at).transpose(2, 0, 1)) < 0.5 + 0.05 * mag)
+    hres = np.abs(_highpass(a) - cv2.remap(_highpass(b), mx, my, cv2.INTER_LINEAR))
+    return hres, ok, mag
+
+
+FEATURES = ["v3_res_med", "v3_res_q90", "v3_hf_res_med", "v3_hf_res_norm", "v3_static_res_mean",
             "v3_fb_bad_frac", "v3_flow_med"]
 
 

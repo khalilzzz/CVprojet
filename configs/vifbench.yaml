@@ -48,6 +48,33 @@ v3:                      # temporal coherence by optical flow (Session 6)
   stride: 2              # a pair (t, t+1) every `stride` frames
   max_pairs: 30
 
+v5:                      # V5: rigid flow with learned depth (outside the course: Longuet-Higgins 1980 + Depth Anything V2)
+  gap: 6               # frame pairs (t, t + gap); the residual of a slow deformation grows with the gap
+  n_pairs: 6             # pairs spread over the clip
+  short_side: 256        # frames are reduced to this short side before flow and depth (speed)
+  focal_factor: 0.8      # ASSUMED focal length = 0.8 x the longest side (as in I2)
+  texture_quantile: 0.6  # only the 40 % most textured pixels enter the fit
+  iters: 5               # IRLS rounds
+  max_px: 30000          # pixels used by the fit
+  bad_px: 1.0            # residual above this = pixel off the rigid-camera model
+  duplicate_diff: 0.3    # pairs of near-identical frames are skipped
+  model: depth-anything/Depth-Anything-V2-Small-hf
+
+i2:                      # vanishing points over time (Sessions 1-4, Grab-3D cue)
+  stride: 1              # every frame (16 per second)
+  max_frames: 48         # 3 s
+  min_len_frac: 0.05     # segments at least 5 % of the image diagonal (about 26 px)
+  max_segments: 200
+  min_segments: 12
+  n_vps: 3
+  angle_deg: 2.5         # short segments of small frames: noisier directions
+  min_inliers: 6
+  max_iters: 1000
+  focal_factor: 0.8
+  max_jump_deg: 6.0
+  min_track_len: 5
+  seed: 0
+
 clip:                    # deep learning baseline (Session 5), with --features ...,clip
   model: ViT-B-32-quickgelu   # the architecture the OpenAI weights were trained with
   pretrained: openai
@@ -56,6 +83,14 @@ clip:                    # deep learning baseline (Session 5), with --features .
 classify:                # src/models/classify.py
   n_splits: 5            # folds grouped by scene
   unseen_generator: true # also test each generator when it is left out of training
+
+robustness:              # python -m src.eval.robustness (experiment 3), applied to the normalized clips
+  levels:
+    - {name: clean}                      # the normalized clip itself (CRF 18)
+    - {name: crf28, crf: 28}
+    - {name: crf35, crf: 35}
+    - {name: half, scale: 0.5}           # width and height / 2, CRF 18
+    - {name: half_crf35, scale: 0.5, crf: 35}
 
 run:
   workers: 8

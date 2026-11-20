@@ -1,0 +1,53 @@
+\babel@toc {french}{}\relax 
+\contentsline {section}{\numberline {1}La big picture et l'intuition fondamentale}{3}{section.1}%
+\contentsline {subsection}{\numberline {1.1}À quoi sert ce projet dans le monde réel ?}{3}{subsection.1.1}%
+\contentsline {subsection}{\numberline {1.2}Analogie maîtresse : l'interrogatoire de témoins}{3}{subsection.1.2}%
+\contentsline {subsection}{\numberline {1.3}Architecture du projet : le fil rouge}{3}{subsection.1.3}%
+\contentsline {subsection}{\numberline {1.4}Le message en cinq phrases (à savoir dire par cœur)}{4}{subsection.1.4}%
+\contentsline {section}{\numberline {2}Roadmap d'apprentissage stratégique}{4}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Ordre optimal}{4}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}Les 20\,\% qui débloquent les 80\,\%}{5}{subsection.2.2}%
+\contentsline {section}{\numberline {3}Le projet complet : intuition et rigueur, méthode par méthode}{5}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Fondations : géométrie projective}{5}{subsection.3.1}%
+\contentsline {paragraph}{Formalisme.}{5}{section*.2}%
+\contentsline {subsection}{\numberline {3.2}RANSAC : estimer malgré les faux appariements}{5}{subsection.3.2}%
+\contentsline {paragraph}{Formalisme}{6}{section*.3}%
+\contentsline {subsection}{\numberline {3.3}Appariement de points : SIFT, ratio de Lowe, vérification mutuelle}{6}{subsection.3.3}%
+\contentsline {paragraph}{Formalisme.}{6}{section*.4}%
+\contentsline {subsection}{\numberline {3.4}La matrice fondamentale et la distance de Sampson (V1, Sessions 3--4)}{7}{subsection.3.4}%
+\contentsline {paragraph}{Formalisme}{7}{section*.5}%
+\contentsline {subsection}{\numberline {3.5}L'homographie, la couverture et la parallaxe}{8}{subsection.3.5}%
+\contentsline {paragraph}{Formalisme.}{8}{section*.6}%
+\contentsline {subsection}{\numberline {3.6}Comparer à mouvement égal : le premier confondant}{8}{subsection.3.6}%
+\contentsline {paragraph}{Méthode}{8}{section*.7}%
+\contentsline {paragraph}{Le contrôle de vid4 : la preuve que Sampson mesure le rendu.}{8}{section*.8}%
+\contentsline {subsection}{\numberline {3.7}Le test à trois vues (V1, Session 7)}{8}{subsection.3.7}%
+\contentsline {paragraph}{Formalisme}{9}{section*.9}%
+\contentsline {subsection}{\numberline {3.8}Points de fuite dans le temps (I2, Sessions 1--4)}{10}{subsection.3.8}%
+\contentsline {paragraph}{Formalisme}{11}{section*.10}%
+\contentsline {subsection}{\numberline {3.9}Cohérence temporelle par flot optique (V3, Sessions 3 et 6)}{11}{subsection.3.9}%
+\contentsline {paragraph}{Formalisme}{11}{section*.11}%
+\contentsline {subsection}{\numberline {3.10}Spectre du bruit (I1, Sessions 1--2)}{12}{subsection.3.10}%
+\contentsline {paragraph}{Formalisme}{12}{section*.12}%
+\contentsline {subsection}{\numberline {3.11}Classification et évaluation (Session 5)}{12}{subsection.3.11}%
+\contentsline {paragraph}{Formalisme}{12}{section*.13}%
+\contentsline {subsection}{\numberline {3.12}ViF-Bench : le confondant du plancher de bruit}{13}{subsection.3.12}%
+\contentsline {subsection}{\numberline {3.13}V5 (hors cours) : le flot est-il celui d'une caméra ?}{14}{subsection.3.13}%
+\contentsline {paragraph}{Formalisme}{14}{section*.14}%
+\contentsline {subsection}{\numberline {3.14}Données et normalisation}{15}{subsection.3.14}%
+\contentsline {section}{\numberline {4}Méthodologie et boîte à outils}{16}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Guide réflexe : face à telle question, quelle méthode ?}{16}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Recette : analyser une paire réel / généré}{16}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}Recette : vérifier qu'un instrument mesure ce qu'on croit}{16}{subsection.4.3}%
+\contentsline {section}{\numberline {5}Exercices corrigés}{16}{section.5}%
+\contentsline {paragraph}{Correction.}{17}{section*.16}%
+\contentsline {paragraph}{Correction.}{17}{section*.18}%
+\contentsline {paragraph}{Correction.}{17}{section*.20}%
+\contentsline {paragraph}{Correction.}{17}{section*.22}%
+\contentsline {paragraph}{Correction.}{18}{section*.24}%
+\contentsline {paragraph}{Correction.}{18}{section*.26}%
+\contentsline {section}{\numberline {6}Fiche synthèse et auto-évaluation}{18}{section.6}%
+\contentsline {subsection}{\numberline {6.1}Cheat sheet}{18}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}Chiffres clés}{18}{subsection.6.2}%
+\contentsline {subsection}{\numberline {6.3}Dix questions de contrôle}{19}{subsection.6.3}%
+\contentsline {section}{\numberline {A}État du projet et points ouverts (18 novembre 2026)}{20}{appendix.A}%

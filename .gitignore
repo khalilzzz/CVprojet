@@ -33,3 +33,12 @@ Thumbs.db
 course/
 CLAUDE.md
 gpuecole.md
+
+# LaTeX build files
+report/*.aux
+report/*.log
+report/*.bbl
+report/*.blg
+report/*.out
+report/*.fdb_latexmk
+report/*.fls

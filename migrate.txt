@@ -33,3 +33,7 @@ column -s, -t < results/latest_vifbench/classification/classify_summary.csv
 #
 # Rapatrier les résultats sur ton PC (à lancer depuis le PC, à la racine du projet) :
 #   scp -rp <login>@<machine>:/Data/khl/CVprojet/results/latest_vifbench ./results/latest_vifbench_school
+
+
+
+python scripts/run_experiment.py --config cifar10/baseline.yaml --set name=wb_full_jpeg --set purify=jpeg && python scripts/run_experiment.py --config cifar10/baseline.yaml --set name=wb_lf_jpeg --set delta_param=lowfreq --set lowfreq_cutoff=12 --set purify=jpeg --set brew_purify=jpeg

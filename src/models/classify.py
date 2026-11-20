@@ -1,8 +1,10 @@
 # Cours : Session 5 (classification) : classifieurs sur nos features, ablations, test inter-générateurs
 """Classify videos as real or generated from the per-video features, family by family.
 
-Families: V1 geometry (``v1_*``), I1 frequency (``i1_*``), V3 temporal (``v3_*``), their
-union ("physics"), the CLIP baseline (``clip_*``) and physics + CLIP.
+Families: V1 geometry (``v1_*``), I1 frequency (``i1_*``), V3 temporal (``v3_*``), I2
+vanishing points over time (``i2_*``), V5 rigid flow with learned depth (``v5_*``), their
+union ("physics"), the CLIP baseline
+(``clip_*``) and physics + CLIP. A family absent from the table is skipped.
 
 Protocol (CLAUDE.md sections 5 and 7):
 - 5-fold cross-validation **grouped by scene**: a real clip and its generated versions are
@@ -33,13 +35,17 @@ from sklearn.model_selection import StratifiedGroupKFold
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
+PHYSICS_PREFIXES = ("v1_", "i1_", "v3_", "i2_", "v5_")
+PHYSICS = "physics (all ours)"
 FAMILIES = {
     "V1 geometry": ("v1_",),
     "I1 frequency": ("i1_",),
     "V3 temporal": ("v3_",),
-    "physics (V1+I1+V3)": ("v1_", "i1_", "v3_"),
+    "I2 vanishing points": ("i2_",),
+    "V5 rigid flow + depth": ("v5_",),
+    PHYSICS: PHYSICS_PREFIXES,
     "CLIP baseline": ("clip_",),
-    "physics + CLIP": ("v1_", "i1_", "v3_", "clip_"),
+    "physics + CLIP": PHYSICS_PREFIXES + ("clip_",),
 }
 
 
@@ -54,8 +60,13 @@ def add_derived(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def family_columns(df: pd.DataFrame, prefixes, max_missing: float = 0.5) -> list[str]:
+    """Usable columns of a family; none if one of its prefixes has no usable column (so
+    "physics + CLIP" is skipped when CLIP was not computed)."""
     cols = [c for c in df.columns if c.startswith(tuple(prefixes))]
-    return [c for c in cols if df[c].isna().mean() <= max_missing and df[c].nunique() > 1]
+    cols = [c for c in cols if df[c].isna().mean() <= max_missing and df[c].nunique() > 1]
+    if "clip_" in prefixes and not any(c.startswith("clip_") for c in cols):
+        return []
+    return cols
 
 
 def make_model(name: str, seed: int):
@@ -87,7 +98,7 @@ def oof_scores(X, y, folds, name, seed, train_mask=None, test_mask=None) -> np.n
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             m.fit(X[tr], y[tr])
-        s[te] = m.predict_proba(X[te])[:, 1]
+            s[te] = m.predict_proba(X[te])[:, 1]
     return s
 
 
@@ -158,7 +169,7 @@ def run(df: pd.DataFrame, seed: int = 0, n_splits: int = 5, unseen: bool = True)
 def importance(df: pd.DataFrame, seed: int, top: int = 15) -> pd.DataFrame:
     """Standardized logistic-regression coefficients of the physics features (fit on all rows).
     Positive = pushes towards "generated"."""
-    cols = family_columns(df, ("v1_", "i1_", "v3_"))
+    cols = family_columns(df, PHYSICS_PREFIXES)
     if not cols:
         return pd.DataFrame()
     y = (df["label"] == "fake").to_numpy(int)

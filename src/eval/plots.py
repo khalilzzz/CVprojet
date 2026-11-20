@@ -357,7 +357,7 @@ def ratio_by_generator(df: pd.DataFrame, meta: pd.DataFrame, col: str, out: Path
 
 
 # ---------------------------------------------------------------- classification
-FAMILY_COLORS = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300"]
+FAMILY_COLORS = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#7a5cd6", "#52514e"]
 
 
 def classification_figures(res: dict, out: Path) -> list[tuple[Path, str]]:

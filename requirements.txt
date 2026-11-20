@@ -14,6 +14,8 @@ huggingface_hub  # download of public benchmarks (src/data/vifbench.py)
 torch            # CLIP baseline (src/models/baseline_clip.py); GPU if available
 torchvision
 open_clip_torch
+transformers    # Depth Anything V2 for V5 (src/features/video_rigidflow.py)
+pillow
 
 # Later phases (install when needed)
 # kornia

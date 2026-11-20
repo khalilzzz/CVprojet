@@ -1,0 +1,32 @@
+# Side-by-side demo video (python demo.py REAL FAKE). The methods use the parameters of
+# the pipeline config below (same normalization, same V1 / I2 / I1 settings).
+pipeline_config: configs/pipeline.yaml
+
+demo:
+  v1_gap: 10             # V1: SIFT matches between frames t - 10 and t (a gap of the pipeline)
+  three_view_gap: 12     # Session 7 test on frames t - 24, t - 12, t (a gap of the pipeline)
+  max_drawn_matches: 350 # at most this many matches drawn per frame (all are used in the values)
+  n_epipolar_lines: 6
+  error_magnify: 20      # three-view reprojection errors are drawn 20 times longer
+  fps_out: 24
+  speed: auto            # auto: the clip is slowed down to fill all the chapters exactly
+  workers: 6             # processes for the per-frame measurements (about 150 MB each)
+
+verdict:                 # comparative verdict of the last chapter (src/demo/verdict.py)
+  main: tv_err           # judge: three-view reprojection error, generated / real at equal motion
+  support: [v1_sampson, v3_hf]   # shown as agreeing or not; they do not change the verdict
+  motion: v1_motion      # image motion between t - v1_gap and t
+  min_motion_px: 0.3     # frames that barely move are left out of the fit
+  min_overlap: 0.3       # no verdict if less than 30 % of the frames share a common motion range
+  min_frames: 24         # no verdict with fewer measured frames per clip
+  n_boot: 1000           # moving-block bootstrap of the frames, 95 % interval
+  block: 12              # frames per bootstrap block (0.5 s)
+
+chapters:                # seconds of the output video; about 20 s in all
+  - {key: title, seconds: 1.5}
+  - {key: v1, seconds: 3.5}
+  - {key: tv, seconds: 3.0}
+  - {key: i2, seconds: 3.5}
+  - {key: v3, seconds: 3.0}
+  - {key: i1, seconds: 3.0}
+  - {key: summary, seconds: 2.5}

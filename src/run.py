@@ -5,10 +5,11 @@
     python -m src.run --videos vid4real vid4fake
     python -m src.run --force             # ignore the cache
 
-    python -m src.run --features v1,i1,v3,clip   # add the CLIP baseline (GPU if available)
+    python -m src.run --features v1,i1,v3,i2,clip   # add the CLIP baseline (GPU if available)
+    python -m src.run --features v5                 # V5: rigid flow with learned depth (outside the course)
 
 Steps: (1) ingest new files of data/raw/ into data/metadata.csv, (2) normalize the videos
-into data/processed/videos/, (3) extract the feature families V1, I1, V3 (and CLIP), cached
+into data/processed/videos/, (3) extract the feature families V1, I1, V3, I2 (and CLIP), cached
 per video, (4) compare real and generated, (5) classify real/generated per family,
 (6) write figures and a self-contained report to
 results/runs/<date-time>/ and copy it to results/latest/ (results/latest_<dataset>/ for a
@@ -41,7 +42,9 @@ from src.data.normalize import normalize_video
 from src.eval import compare, plots
 from src.eval.report import Report
 from src.features import image_frequency as i1
+from src.features import image_perspective as i2
 from src.features import video_epipolar as v1
+from src.features import video_rigidflow as v5
 from src.features import video_temporal as v3
 from src.utils.config import REPO_ROOT, load_config
 
@@ -79,8 +82,9 @@ def simple_job(family: str, video_id: str, path: str, label: str, cfg: dict, out
     return video_id
 
 
-FAMILY_MODULES = {"i1": i1, "v3": v3}
-DONE_FILE = {"v1": "pairs.csv", "i1": "features.json", "v3": "features.json"}
+FAMILY_MODULES = {"i1": i1, "v3": v3, "i2": i2, "v5": v5}
+DONE_FILE = {"v1": "pairs.csv", "i1": "features.json", "v3": "features.json", "i2": "features.json",
+             "v5": "features.json"}
 
 
 def _run_pool(fn, jobs: list, tag: str, workers: int) -> None:
@@ -401,8 +405,8 @@ def build_report(run_dir: Path, meta: pd.DataFrame, videos: pd.DataFrame, fam_di
     return rep.write(run_dir / "report.html")
 
 
-def main() -> None:
-    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+def add_selection_args(ap: argparse.ArgumentParser) -> None:
+    """Options that choose the videos (shared with src.eval.robustness)."""
     ap.add_argument("--config", default="configs/pipeline.yaml")
     ap.add_argument("--videos", nargs="*", help="ids to process (default: all)")
     ap.add_argument("--dataset", default="own", help="rows of this dataset (own, vifbench)")
@@ -413,14 +417,12 @@ def main() -> None:
     ap.add_argument("--report-only", action="store_true",
                     help="compute nothing: build the report from the videos already in the cache")
     ap.add_argument("--workers", type=int)
-    ap.add_argument("--features", default="v1,i1,v3",
-                    help="feature families, comma separated: v1, i1, v3, clip (default: v1,i1,v3)")
-    ap.add_argument("--no-classify", action="store_true", help="skip the classification section")
-    args = ap.parse_args()
-    cfg = load_config(args.config)
-    t0 = time.time()
+    ap.add_argument("--features", default="v1,i1,v3,i2",
+                    help="feature families, comma separated: v1, i1, v3, i2, v5 (rigid flow with "
+                         "learned depth), clip (default: v1,i1,v3,i2)")
 
-    meta = ingest()
+
+def select_videos(meta: pd.DataFrame, args) -> pd.DataFrame:
     videos = meta[(meta["media_type"] == "video") & (meta["path"] != "")]
     videos = videos[videos["dataset"] == args.dataset]
     if args.videos:
@@ -439,7 +441,10 @@ def main() -> None:
         videos = videos[present]
     if videos.empty:
         raise SystemExit("no video to process")
+    return videos
 
+
+def normalize_all(videos: pd.DataFrame, cfg: dict) -> dict:
     processed = {}
     for k, (_, r) in enumerate(videos.iterrows(), 1):
         processed[r["id"]] = normalize_video(REPO_ROOT / r["path"], cfg["normalize"], force=False,
@@ -447,21 +452,41 @@ def main() -> None:
         if k % 50 == 0:
             print(f"[normalize] {k}/{len(videos)}")
     print(f"[normalize] {len(processed)} videos in data/processed/videos/")
+    return processed
 
-    families = [f.strip() for f in args.features.split(",") if f.strip()]
-    workers = args.workers or cfg["run"]["workers"]
+
+def compute_families(families: list[str], videos: pd.DataFrame, processed: dict, cfg: dict,
+                     force: bool, workers: int, report_only: bool) -> dict:
     fam_dirs = {}
     for fam in families:
         if fam == "clip":
-            fam_dirs["clip"] = run_clip(videos, processed, cfg, args.force, args.report_only)
+            fam_dirs["clip"] = run_clip(videos, processed, cfg, force, report_only)
         else:
-            fam_dirs[fam] = run_family(fam, videos, processed, cfg, args.force, workers,
-                                       args.report_only)
+            fam_dirs[fam] = run_family(fam, videos, processed, cfg, force, workers, report_only)
+    return fam_dirs
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    add_selection_args(ap)
+    ap.add_argument("--no-classify", action="store_true", help="skip the classification section")
+    args = ap.parse_args()
+    cfg = load_config(args.config)
+    t0 = time.time()
+
+    meta = ingest()
+    videos = select_videos(meta, args)
+    processed = normalize_all(videos, cfg)
+    families = [f.strip() for f in args.features.split(",") if f.strip()]
+    fam_dirs = compute_families(families, videos, processed, cfg, args.force,
+                                args.workers or cfg["run"]["workers"], args.report_only)
 
     run_dir = RESULTS / "runs" / datetime.now().strftime("%Y%m%d-%H%M%S")
     run_dir.mkdir(parents=True)
     report = build_report(run_dir, meta, videos, fam_dirs, cfg, classify=not args.no_classify)
     latest = RESULTS / ("latest" if args.dataset == "own" else f"latest_{args.dataset}")
+    if args.max_scenes or args.videos or args.generators:
+        latest = latest.with_name(latest.name + "_subset")     # never overwrite a full run with a subset
     shutil.rmtree(latest, ignore_errors=True)
     shutil.copytree(run_dir, latest)
     print(f"[done] {time.time() - t0:.0f} s | report: {(latest / 'report.html').relative_to(REPO_ROOT)}"
